@@ -19,7 +19,7 @@ export const Header: React.FC<Props> = ({
   onToggleAll,
   completed,
 }) => {
-  function handleSubmit(event) {
+  const handleSubmit = event => {
     event.preventDefault();
     if (query === '') {
       onError('Title should not be empty');
@@ -39,7 +39,7 @@ export const Header: React.FC<Props> = ({
       .catch(() => onError('Unable to add a todo'));
 
     onQuery('');
-  }
+  };
 
   return (
     <header className="todoapp__header">

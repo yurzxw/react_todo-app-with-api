@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Todo } from '../types/Todo';
 import classNames from 'classnames';
 import * as todosService from '../api/todos';
+
 type Props = {
   todo: Todo;
   onToggle: (id: number) => void;
@@ -25,6 +26,51 @@ export const TodoItem: React.FC<Props> = ({
   const [selectedTodo, setSelectedTodo] = useState(false);
   const [selectedTodoId, setSelectedTodoId] = useState(0);
   const [newTitle, setNewTitle] = useState(title);
+
+  const handleSubmitForChange = event => {
+    event.preventDefault();
+    if (newTitle === title) {
+      setSelectedTodo(false);
+    }
+
+    if (newTitle.trim() === '') {
+      setSelectedTodo(false);
+      onDeleteTodo(id);
+      onError('Title should not be empty');
+    } else {
+      todosService
+        .patchTodo(id, { title: newTitle })
+        .catch(() => onError('Unable to update a todo'))
+        .then(() => {
+          onEditTodo(id, newTitle);
+          setSelectedTodo(false);
+          setSelectedTodoId(0);
+        });
+    }
+  };
+
+  const handleKeyUp = e => {
+    if (e.key === 'Escape') {
+      setSelectedTodo(false);
+    }
+  };
+
+  const handleBlur = () => {
+    if (newTitle.trim() === '') {
+      setSelectedTodo(false);
+      onDeleteTodo(id);
+      onError('Title should not be empty');
+    } else {
+      todosService
+        .patchTodo(id, { title: newTitle })
+        .catch(() => onError('Unable to update a todo'))
+        .then(() => {
+          onEditTodo(id, newTitle);
+          setSelectedTodo(false);
+          setSelectedTodoId(0);
+        });
+    }
+  };
 
   if (!todo) {
     return null; // або покажіть заглушку
@@ -57,49 +103,14 @@ export const TodoItem: React.FC<Props> = ({
       {selectedTodo && selectedTodoId === id ? (
         <form
           onSubmit={event => {
-            event.preventDefault();
-            if (newTitle === title) {
-              setSelectedTodo(false);
-            }
-
-            if (newTitle === '') {
-              setSelectedTodo(false);
-              onDeleteTodo(id);
-              onError('Title should not be empty');
-            } else {
-              todosService
-                .patchTodo(id, { title: newTitle })
-                .catch(() => onError('Unable to update a todo'))
-                .then(() => {
-                  onEditTodo(id, newTitle);
-                  setSelectedTodo(false);
-                  setSelectedTodoId(0);
-                });
-            }
+            handleSubmitForChange(event);
           }}
         >
           <input
             onKeyUp={e => {
-              if (e.key === 'Escape') {
-                setSelectedTodo(false);
-              }
+              handleKeyUp(e);
             }}
-            onBlur={() => {
-              if (newTitle === '') {
-                setSelectedTodo(false);
-                onDeleteTodo(id);
-                onError('Title should not be empty');
-              } else {
-                todosService
-                  .patchTodo(id, { title: newTitle })
-                  .catch(() => onError('Unable to update a todo'))
-                  .then(() => {
-                    onEditTodo(id, newTitle);
-                    setSelectedTodo(false);
-                    setSelectedTodoId(0);
-                  });
-              }
-            }}
+            onBlur={handleBlur}
             autoFocus
             data-cy="TodoTitleField"
             type="text"

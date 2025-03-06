@@ -4,8 +4,8 @@ import React, { useEffect, useState } from 'react';
 import * as todosService from './api/todos';
 import classNames from 'classnames';
 import { Todo } from './types/Todo';
-import { Header } from './components/header';
-import { Footer } from './components/footer';
+import { Header } from './components/Header';
+import { Footer } from './components/Footer';
 import { TodoList } from './components/TodoList';
 import { Status } from './types/Status';
 
@@ -99,7 +99,6 @@ export const App: React.FC = () => {
   };
 
   useEffect(() => {
-    //todosService.clearTodos();
     setLoading(true);
     todosService
       .getTodos()
