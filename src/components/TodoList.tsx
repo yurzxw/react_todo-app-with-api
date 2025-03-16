@@ -1,14 +1,16 @@
 import { TodoItem } from './TodoItem';
 import { Todo } from '../types/Todo';
-
+import { useState } from 'react';
 type Props = {
   onToggle: (id: number) => void;
   onDeleteTodo: (id: number) => void;
   loading: boolean;
   filtered: Todo[];
-  ID: number;
-  onError: () => void;
+  tempTodo: Todo | null;
   onEditTodo: (id: number, title: string) => void;
+  onLoading: (is: boolean) => void;
+  onError: (message: string) => void;
+  onUpdateTodoTitle: (id: number, newTitle: string) => void;
 };
 
 export const TodoList: React.FC<Props> = ({
@@ -16,26 +18,47 @@ export const TodoList: React.FC<Props> = ({
   onDeleteTodo,
   loading,
   filtered,
-  ID,
-  onError,
+  tempTodo,
   onEditTodo,
+  onLoading,
+  onError,
+  onUpdateTodoTitle,
 }) => {
+  const [selected, setSelectedTodo] = useState<number | null>(0);
+
   return (
     <section className="todoapp__main" data-cy="TodoList">
-      {filtered?.map(todo => {
-        return (
-          <TodoItem
-            key={todo.id}
-            todo={todo}
-            onToggle={onToggle}
-            onDeleteTodo={onDeleteTodo}
-            loading={loading}
-            ID={ID}
-            onError={onError}
-            onEditTodo={onEditTodo}
-          />
-        );
-      })}
+      {filtered.map(todo => (
+        <TodoItem
+          key={todo.id}
+          todo={todo}
+          onToggle={onToggle}
+          onDeleteTodo={onDeleteTodo}
+          loading={loading && selected === todo.id}
+          selected={selected}
+          setSelectedTodo={setSelectedTodo}
+          onEditTodo={onEditTodo}
+          onLoading={onLoading}
+          onError={onError}
+          onUpdateTodoTitle={onUpdateTodoTitle}
+        />
+      ))}
+
+      {tempTodo && (
+        <TodoItem
+          key="temp"
+          todo={tempTodo}
+          onToggle={onToggle}
+          onDeleteTodo={onDeleteTodo}
+          loading={true}
+          selected={selected}
+          setSelectedTodo={setSelectedTodo}
+          onEditTodo={onEditTodo}
+          onLoading={onLoading}
+          onError={onError}
+          onUpdateTodoTitle={onUpdateTodoTitle}
+        />
+      )}
     </section>
   );
 };

@@ -1,60 +1,50 @@
-import React from 'react';
-import { USER_ID } from '../api/todos';
-import * as todosService from '../api/todos';
 import classNames from 'classnames';
-
+import React, { useEffect } from 'react';
+import { Todo } from '../types/Todo';
 type Props = {
-  onError: () => void;
-  onTodos: () => void;
-  onQuery: () => void;
+  onQuery: (query: string) => void;
+  loading: boolean;
+  inputRef: React.RefObject<HTMLInputElement>;
+  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   query: string;
   onToggleAll: () => void;
   completed: () => boolean;
+  todos: Todo[];
 };
 export const Header: React.FC<Props> = ({
-  onError,
-  onTodos,
   onQuery,
+  loading,
+  inputRef,
+  onSubmit,
   query,
   onToggleAll,
   completed,
+  todos,
 }) => {
-  const handleSubmit = event => {
-    event.preventDefault();
-    if (query === '') {
-      onError('Title should not be empty');
-
-      return;
+  useEffect(() => {
+    if (inputRef.current && !loading) {
+      inputRef.current.focus();
     }
+  }, [inputRef, loading]);
 
-    todosService
-      .postTodo({
-        userId: USER_ID,
-        title: query,
-        completed: false,
-      })
-      .then(newTodo => {
-        onTodos(currentTodos => [...currentTodos, newTodo]);
-      })
-      .catch(() => onError('Unable to add a todo'));
-
-    onQuery('');
-  };
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
 
   return (
     <header className="todoapp__header">
       {/* this button should have `active` class only if all todos are completed */}
-      <button
-        type="button"
-        className={classNames('todoapp__toggle-all', { active: completed() })}
-        data-cy="ToggleAllButton"
-        onClick={onToggleAll}
-      />
+      {!loading && todos.length > 0 && (
+        <button
+          type="button"
+          className={classNames('todoapp__toggle-all', { active: completed() })}
+          data-cy="ToggleAllButton"
+          onClick={onToggleAll}
+        />
+      )}
 
       {/* Add a todo on form submit */}
       <form
         onSubmit={event => {
-          handleSubmit(event);
+          onSubmit(event);
         }}
       >
         <input
@@ -64,7 +54,8 @@ export const Header: React.FC<Props> = ({
           placeholder="What needs to be done?"
           value={query}
           onChange={event => onQuery(event.target.value)}
-          autoFocus
+          ref={inputRef}
+          disabled={loading}
         />
       </form>
     </header>

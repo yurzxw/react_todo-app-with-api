@@ -12,7 +12,7 @@ export const deleteTodo = todoId => {
 };
 
 export const postTodo = (data: Todo) => {
-  return client.post<Todo[]>(`/todos?userId=${USER_ID}`, data);
+  return client.post<Todo[]>(`/todos`, data);
 };
 
 export const patchTodo = (todoId, data) => {

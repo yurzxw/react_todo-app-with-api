@@ -1,72 +1,117 @@
-import { useState } from 'react';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 import { Todo } from '../types/Todo';
 import classNames from 'classnames';
+import { useState } from 'react';
 import * as todosService from '../api/todos';
+import { useRef, useEffect } from 'react';
+import { TodoStatus } from '../types/TodoStatus';
 
 type Props = {
   todo: Todo;
   onToggle: (id: number) => void;
   onDeleteTodo: (id: number) => void;
   loading: boolean;
-  ID: number;
-  onError: () => void;
+  selected: number;
+  setSelectedTodo: (todoId: number) => void;
   onEditTodo: (id: number, title: string) => void;
+  onLoading: (is: boolean) => void;
+  onError: (message: string) => void;
+  onUpdateTodoTitle: (id: number, newTitle: string) => void;
 };
 export const TodoItem: React.FC<Props> = ({
   todo,
   onToggle,
   onDeleteTodo,
   loading,
-  ID,
-  onError,
+  setSelectedTodo,
   onEditTodo,
+  onLoading,
+  onError,
 }) => {
   const { title, completed, id } = todo;
 
-  const [selectedTodo, setSelectedTodo] = useState(false);
+  const [selectedTodoForEdit, setSelectedTodoForEdit] = useState(false);
   const [selectedTodoId, setSelectedTodoId] = useState(0);
   const [newTitle, setNewTitle] = useState(title);
 
-  const handleSubmitForChange = event => {
+  const [todoStatus, setTodoStatus] = useState<TodoStatus>('idle');
+  const renameInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleSubmitForChange = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (newTitle === title) {
-      setSelectedTodo(false);
+    const trimmedTitle = newTitle.trim();
+
+    if (todoStatus !== 'editing' || trimmedTitle === title) {
+      setTodoStatus('idle');
+
+      return;
     }
 
-    if (newTitle.trim() === '') {
-      setSelectedTodo(false);
-      onDeleteTodo(id);
-      onError('Title should not be empty');
-    } else {
-      todosService
-        .patchTodo(id, { title: newTitle })
-        .catch(() => onError('Unable to update a todo'))
-        .then(() => {
-          onEditTodo(id, newTitle);
-          setSelectedTodo(false);
-          setSelectedTodoId(0);
-        });
+    setTodoStatus('updating');
+    onLoading(true);
+
+    if (trimmedTitle === '') {
+      try {
+        await onDeleteTodo(id);
+      } catch {
+        onError('Unable to delete a todo');
+        onLoading(false);
+        setTodoStatus('editing'); //  Поле залишається відкритим
+        renameInputRef.current?.focus(); //  Фокусуємо інпут
+
+        return;
+      }
+
+      return;
+    }
+
+    try {
+      await todosService.patchTodo(id, { title: trimmedTitle });
+      onEditTodo(id, trimmedTitle);
+      setNewTitle(trimmedTitle);
+      setTodoStatus('idle');
+    } catch {
+      onError('Unable to update a todo');
+      setTodoStatus('editing'); //  Поле залишається відкритим при помилці
+      renameInputRef.current?.focus(); //  Фокусуємо інпут
+    } finally {
+      onLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (todoStatus === 'editing' && renameInputRef.current) {
+      renameInputRef.current.focus();
+    }
+  }, [todoStatus]);
 
   const handleKeyUp = e => {
     if (e.key === 'Escape') {
-      setSelectedTodo(false);
+      setTodoStatus('idle');
     }
   };
 
-  const handleBlur = () => {
+  const handleBlur = async () => {
     if (newTitle.trim() === '') {
-      setSelectedTodo(false);
-      onDeleteTodo(id);
+      setTodoStatus('idle');
+      try {
+        onDeleteTodo(id);
+      } catch {
+        setTodoStatus('editing');
+      }
+
       onError('Title should not be empty');
     } else {
       todosService
         .patchTodo(id, { title: newTitle })
-        .catch(() => onError('Unable to update a todo'))
+        .catch(() => {
+          onError('Unable to update a todo');
+          setTodoStatus('editing');
+        })
         .then(() => {
           onEditTodo(id, newTitle);
-          setSelectedTodo(false);
+          setTodoStatus('idle');
           setSelectedTodoId(0);
         });
     }
@@ -79,11 +124,12 @@ export const TodoItem: React.FC<Props> = ({
   return (
     <div
       data-cy="Todo"
-      key={id}
+      key={todo.id}
       className={classNames('todo', { completed: completed })}
       onDoubleClick={() => {
-        setSelectedTodo(true);
+        setSelectedTodoForEdit(true);
         setSelectedTodoId(id);
+        setTodoStatus('editing');
       }}
     >
       <label className="todo__status-label">
@@ -93,20 +139,24 @@ export const TodoItem: React.FC<Props> = ({
           type="checkbox"
           className="todo__status"
           checked={completed}
-          onChange={() => onToggle(id)}
+          onChange={() => {
+            onToggle(id);
+            setSelectedTodo(id);
+          }}
         />
         <span className="hidden" style={{ display: 'none' }}>
           *
         </span>
       </label>
 
-      {selectedTodo && selectedTodoId === id ? (
+      {todoStatus === 'editing' ? (
         <form
           onSubmit={event => {
             handleSubmitForChange(event);
           }}
         >
           <input
+            ref={renameInputRef}
             onKeyUp={e => {
               handleKeyUp(e);
             }}
@@ -132,6 +182,7 @@ export const TodoItem: React.FC<Props> = ({
             className="todo__remove"
             data-cy="TodoDelete"
             onClick={() => {
+              setSelectedTodo(id);
               onDeleteTodo(id);
             }}
           >
@@ -141,7 +192,7 @@ export const TodoItem: React.FC<Props> = ({
           <div
             data-cy="TodoLoader"
             className={classNames('modal', 'overlay', {
-              'is-active': loading && ID === id,
+              'is-active': loading || todoStatus === 'updating',
             })}
           >
             <div className="modal-background has-background-white-ter" />

@@ -5,10 +5,11 @@ import { Status } from '../types/Status';
 
 type Props = {
   onFilter: (filter: string) => void;
-  onError: () => void;
-  onTodos: () => void;
+  onError: (error: string) => void;
+  onTodos: (todos: Todo[]) => void;
   todos: Todo[];
   filter: string;
+  focus: () => void;
 };
 
 export const Footer: React.FC<Props> = ({
@@ -17,20 +18,47 @@ export const Footer: React.FC<Props> = ({
   onTodos,
   todos,
   filter,
+  focus,
 }) => {
-  const clearCompleted = () => {
-    todos.map(todo => {
-      if (todo.completed) {
-        todosService
-          .deleteTodo(todo.id)
-          .catch(() => onError('Unable to delete todo'));
-      }
+  const clearCompleted = async () => {
+    const completedTodos = todos.filter(todo => todo.completed);
+
+    onTodos((prevTodos: Todo[]) =>
+      prevTodos.map(todo =>
+        todo.completed ? { ...todo, isLoading: true } : todo,
+      ),
+    );
+
+    const deletePromises = completedTodos.map(todo =>
+      todosService
+        .deleteTodo(todo.id)
+        .then(() => ({ id: todo.id, success: true }))
+        .catch(() => ({ id: todo.id, success: false })),
+    );
+
+    const results = await Promise.all(deletePromises);
+
+    onTodos((prevTodos): Todo[] => {
+      let updatedTodos = [...prevTodos];
+
+      results.forEach(result => {
+        if (result.success) {
+          updatedTodos = updatedTodos.filter(todo => todo.id !== result.id);
+        } else {
+          updatedTodos = updatedTodos.map(todo =>
+            todo.id === result.id ? { ...todo, isLoading: false } : todo,
+          );
+          onError('Unable to delete a todo');
+        }
+      });
+
+      return updatedTodos;
     });
 
-    onTodos(todos.filter(todo => !todo.completed));
+    focus();
   };
 
-  const itemsLeft = todos?.filter(todo => !todo.completed).length ?? 0;
+  const itemsLeft = todos.filter(todo => !todo.completed).length;
 
   return (
     <footer
@@ -59,9 +87,7 @@ export const Footer: React.FC<Props> = ({
                 selected: isActive,
               })}
               data-cy={`FilterLink${filteLabel}`}
-              onClick={() => {
-                onFilter(status);
-              }}
+              onClick={() => onFilter(status)}
             >
               {filteLabel}
             </a>
@@ -75,6 +101,7 @@ export const Footer: React.FC<Props> = ({
         className="todoapp__clear-completed"
         data-cy="ClearCompletedButton"
         onClick={clearCompleted}
+        disabled={todos.filter(todo => todo.completed).length === 0}
       >
         Clear completed
       </button>
