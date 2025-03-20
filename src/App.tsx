@@ -17,7 +17,7 @@ export const App: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
   const [error, setError] = useState('');
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState(Status.All);
   const [activeTodosCount, setActiveTodosCount] = useState(0);
 
   const inputRef = useRef<HTMLInputElement>(null);

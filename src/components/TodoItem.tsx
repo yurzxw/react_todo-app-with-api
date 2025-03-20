@@ -93,7 +93,7 @@ export const TodoItem: React.FC<Props> = ({
 
   const handleBlur = async () => {
     if (newTitle.trim() === '') {
-      setTodoStatus('idle');
+      setTodoStatus('editing');
       try {
         onDeleteTodo(id);
       } catch {
@@ -126,9 +126,10 @@ export const TodoItem: React.FC<Props> = ({
       key={todo.id}
       className={classNames('todo', { completed: completed })}
       onDoubleClick={() => {
+        setTodoStatus('editing');
+
         setSelectedTodoForEdit(true);
         setSelectedTodoId(id);
-        setTodoStatus('editing');
       }}
     >
       <label className="todo__status-label">
