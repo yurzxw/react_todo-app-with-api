@@ -17,7 +17,6 @@ type Props = {
   onEditTodo: (id: number, title: string) => void;
   onLoading: (is: boolean) => void;
   onError: (message: string) => void;
-  onUpdateTodoTitle: (id: number, newTitle: string) => void;
 };
 export const TodoItem: React.FC<Props> = ({
   todo,
@@ -86,7 +85,7 @@ export const TodoItem: React.FC<Props> = ({
     }
   }, [todoStatus]);
 
-  const handleKeyUp = e => {
+  const handleKeyUp = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       setTodoStatus('idle');
     }
@@ -134,7 +133,7 @@ export const TodoItem: React.FC<Props> = ({
     >
       <label className="todo__status-label">
         <input
-          id={id}
+          id={id.toString()}
           data-cy="TodoStatus"
           type="checkbox"
           className="todo__status"

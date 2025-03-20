@@ -58,7 +58,7 @@ export const App: React.FC = () => {
     }, 3000);
   }
 
-  const onEditTodo = (idTodo, title) => {
+  const onEditTodo = (idTodo: number, title: string) => {
     setTodos(prevTodos => {
       return prevTodos.map(todo => {
         if (todo.id === idTodo) {
@@ -70,40 +70,12 @@ export const App: React.FC = () => {
     });
   };
 
-  const handleUpdateTodoTitle = async (id: number, newTitle: string) => {
-    try {
-      setTodos(prev => [...prev, id]);
-      await todosService.patchTodo(id, { title: newTitle });
-      setTodos(prevTodos =>
-        prevTodos.map(todo =>
-          todo.id === id ? { ...todo, title: newTitle } : todo,
-        ),
-      );
-    } catch (err) {
-      setError('Unable to update todo');
-      throw err;
-    } finally {
-      setTodos(prev => prev.filter(todoId => todoId !== id));
-      setTimeout(() => {
-        setError('');
-      }, 3000);
-    }
-  };
-
   const allTodosCompleted = () => {
     return (
       todos.filter(todo => todo.completed).length === todos.length &&
       todos.length !== 0
     );
   };
-
-  useEffect(() => {
-    const activeCount = todos.filter(
-      todo => !todo.completed && !todo.isTemp,
-    ).length;
-
-    setActiveTodosCount(activeCount);
-  }, [todos]);
 
   const areAllCompleted =
     todos.length > 0 && todos.every(todo => todo.completed);
@@ -186,10 +158,14 @@ export const App: React.FC = () => {
   const handleToggle = (todoId: number) => {
     setLoading(true);
 
+    const todoToUpdate = todos.find(todo => todo.id === todoId);
+
+    if (!todoToUpdate) {
+      return;
+    }
+
     todosService
-      .patchTodo(todos.find(todo => todo.id === todoId).id, {
-        completed: !todos.find(todo => todo.id === todoId).completed,
-      })
+      .patchTodo(todoToUpdate.id, { completed: !todoToUpdate.completed })
       .then(() => {
         setTimeout(() => {
           setTodos(currentTodos =>
@@ -259,7 +235,6 @@ export const App: React.FC = () => {
           onError={setError}
           onEditTodo={onEditTodo}
           onLoading={setLoading}
-          onUpdateTodoTitle={handleUpdateTodoTitle}
         />
 
         {!!todos.length && (

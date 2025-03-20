@@ -10,7 +10,6 @@ type Props = {
   onEditTodo: (id: number, title: string) => void;
   onLoading: (is: boolean) => void;
   onError: (message: string) => void;
-  onUpdateTodoTitle: (id: number, newTitle: string) => void;
 };
 
 export const TodoList: React.FC<Props> = ({
@@ -22,9 +21,8 @@ export const TodoList: React.FC<Props> = ({
   onEditTodo,
   onLoading,
   onError,
-  onUpdateTodoTitle,
 }) => {
-  const [selected, setSelectedTodo] = useState<number | null>(0);
+  const [selected, setSelectedTodo] = useState<number>(0);
 
   return (
     <section className="todoapp__main" data-cy="TodoList">
@@ -40,7 +38,6 @@ export const TodoList: React.FC<Props> = ({
           onEditTodo={onEditTodo}
           onLoading={onLoading}
           onError={onError}
-          onUpdateTodoTitle={onUpdateTodoTitle}
         />
       ))}
 
@@ -56,7 +53,6 @@ export const TodoList: React.FC<Props> = ({
           onEditTodo={onEditTodo}
           onLoading={onLoading}
           onError={onError}
-          onUpdateTodoTitle={onUpdateTodoTitle}
         />
       )}
     </section>
