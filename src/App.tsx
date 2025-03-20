@@ -6,8 +6,10 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import * as todosService from './api/todos';
 import classNames from 'classnames';
 import { Todo } from './types/Todo';
-import { Header } from './components/Header';
-import { Footer } from './components/Footer';
+// eslint-disable-next-line import/extensions
+import { Header } from './components/Header.tsx';
+// eslint-disable-next-line import/extensions
+import { Footer } from './components/Footer.tsx';
 import { TodoList } from './components/TodoList';
 import { Status } from './types/Status';
 
