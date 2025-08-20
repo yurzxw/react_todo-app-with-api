@@ -197,8 +197,8 @@ export const App: React.FC = () => {
           setLoading(false);
         }, 500),
       )
-      .catch(() => setError('Unable to delete a todo'))
-      .finally(() => focusInput());
+      .catch(() =>{ setError('Unable to delete a todo'); setLoading(false)})
+      .finally(() => {focusInput(); setLoading(false)});
   };
 
   const filteredTodos = todos.filter(todo => {

@@ -1,28 +1,26 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-
-import { Todo } from '../types/Todo';
+/* eslint-disable jsx-a11y/label-has-associated-control */
+import React, { useRef, useState, useEffect } from 'react';
 import classNames from 'classnames';
-import { useState } from 'react';
+import { Todo } from '../types/Todo';
 import * as todosService from '../api/todos';
-import { useRef, useEffect } from 'react';
-import { TodoStatus } from '../types/TodoStatus';
 
 type Props = {
   todo: Todo;
+  loading: boolean;
   onToggle: (id: number) => void;
   onDeleteTodo: (id: number) => void;
-  loading: boolean;
-  selected: number;
   setSelectedTodo: (todoId: number) => void;
   onEditTodo: (id: number, title: string) => void;
   onLoading: (is: boolean) => void;
   onError: (message: string) => void;
 };
+
 export const TodoItem: React.FC<Props> = ({
   todo,
+  loading,
   onToggle,
   onDeleteTodo,
-  loading,
   setSelectedTodo,
   onEditTodo,
   onLoading,
@@ -30,107 +28,66 @@ export const TodoItem: React.FC<Props> = ({
 }) => {
   const { title, completed, id } = todo;
 
-  const [selectedTodoForEdit, setSelectedTodoForEdit] = useState(false);
-  const [selectedTodoId, setSelectedTodoId] = useState(0);
+  const [isEditing, setIsEditing] = useState(false);
   const [newTitle, setNewTitle] = useState(title);
-
-  const [todoStatus, setTodoStatus] = useState<TodoStatus>('idle');
-  const renameInputRef = useRef<HTMLInputElement | null>(null);
-
-  const handleSubmitForChange = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const trimmedTitle = newTitle.trim();
-
-    if (todoStatus !== 'editing' || trimmedTitle === title) {
-      setTodoStatus('idle');
-
-      return;
-    }
-
-    setTodoStatus('updating');
-    onLoading(true);
-
-    if (trimmedTitle === '') {
-      try {
-        await onDeleteTodo(id);
-      } catch {
-        onError('Unable to delete a todo');
-        onLoading(false);
-        setTodoStatus('editing'); //  Поле залишається відкритим
-        renameInputRef.current?.focus(); //  Фокусуємо інпут
-
-        return;
-      }
-
-      return;
-    }
-
-    try {
-      await todosService.patchTodo(id, { title: trimmedTitle });
-      onEditTodo(id, trimmedTitle);
-      setNewTitle(trimmedTitle);
-      setTodoStatus('idle');
-    } catch {
-      onError('Unable to update a todo');
-      setTodoStatus('editing'); //  Поле залишається відкритим при помилці
-      renameInputRef.current?.focus(); //  Фокусуємо інпут
-    } finally {
-      onLoading(false);
-    }
-  };
+  const [isSaving, setIsSaving] = useState(false);
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (todoStatus === 'editing' && renameInputRef.current) {
+    if (isEditing && renameInputRef.current) {
       renameInputRef.current.focus();
     }
-  }, [todoStatus]);
+  }, [isEditing]);
 
-  const handleKeyUp = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      setTodoStatus('idle');
+  const handleSave = async () => {
+    const trimmedTitle = newTitle.trim();
+
+    if (trimmedTitle === title) {
+      setIsEditing(false);
+      return;
     }
-  };
 
-  const handleBlur = async () => {
-    if (newTitle.trim() === '') {
-      setTodoStatus('editing');
-      try {
+    if (isSaving) {
+      return;
+    }
+
+    setIsSaving(true);
+    onLoading(true);
+    setSelectedTodo(id);
+
+    try {
+      if (trimmedTitle === '') {
+        await todosService.deleteTodo(id);
         onDeleteTodo(id);
-      } catch {
-        setTodoStatus('editing');
+      } else {
+        await todosService.patchTodo(id, { title: trimmedTitle });
+        onEditTodo(id, trimmedTitle);
+        setNewTitle(trimmedTitle);
       }
-
-      onError('Title should not be empty');
-    } else {
-      todosService
-        .patchTodo(id, { title: newTitle })
-        .catch(() => {
-          onError('Unable to update a todo');
-          setTodoStatus('editing');
-        })
-        .then(() => {
-          onEditTodo(id, newTitle);
-          setTodoStatus('idle');
-          setSelectedTodoId(0);
-        });
+      setIsEditing(false);
+    } catch {
+      onError(trimmedTitle === '' ? 'Unable to delete a todo' : 'Unable to update a todo');
+      setIsEditing(true); 
+     
+    } finally {
+      setIsSaving(false);
+      onLoading(false);
+      setSelectedTodo(0);
     }
   };
 
-  if (!todo) {
-    return null; // або покажіть заглушку
-  }
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setIsEditing(false);
+      setNewTitle(title); // Відкат змін
+    }
+  };
 
   return (
     <div
       data-cy="Todo"
-      key={todo.id}
       className={classNames('todo', { completed: completed })}
-      onDoubleClick={() => {
-        setTodoStatus('editing');
-
-        setSelectedTodoForEdit(true);
-        setSelectedTodoId(id);
-      }}
+      onDoubleClick={() => setIsEditing(true)}
     >
       <label className="todo__status-label">
         <input
@@ -143,40 +100,29 @@ export const TodoItem: React.FC<Props> = ({
             onToggle(id);
             setSelectedTodo(id);
           }}
+          disabled={loading || isSaving}
         />
-        <span className="hidden" style={{ display: 'none' }}>
-          *
-        </span>
+        <span className="hidden" style={{ display: 'none' }}>*</span>
       </label>
 
-      {todoStatus === 'editing' ? (
-        <form
-          onSubmit={event => {
-            handleSubmitForChange(event);
-          }}
-        >
+      {isEditing ? (
+        <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
           <input
             ref={renameInputRef}
-            onKeyUp={e => {
-              handleKeyUp(e);
-            }}
-            onBlur={handleBlur}
-            autoFocus
+            onBlur={handleSave}
+            onKeyDown={handleKeyDown}
             data-cy="TodoTitleField"
             type="text"
             className="todo__title-field"
             placeholder="Empty todo will be deleted"
             value={newTitle}
-            onChange={e => setNewTitle(e.target.value)}
+            onChange={(e) => setNewTitle(e.target.value)}
+            autoFocus
           />
         </form>
       ) : (
         <>
-          {' '}
-          <span data-cy="TodoTitle" className="todo__title">
-            {title}
-          </span>
-          {/* Remove button appears only on hover */}
+          <span data-cy="TodoTitle" className="todo__title">{title}</span>
           <button
             type="button"
             className="todo__remove"
@@ -185,21 +131,22 @@ export const TodoItem: React.FC<Props> = ({
               setSelectedTodo(id);
               onDeleteTodo(id);
             }}
+            disabled={loading || isSaving}
           >
             ×
           </button>
-          {/* overlay will cover the todo while it is being deleted or updated */}
-          <div
-            data-cy="TodoLoader"
-            className={classNames('modal', 'overlay', {
-              'is-active': loading || todoStatus === 'updating',
-            })}
-          >
-            <div className="modal-background has-background-white-ter" />
-            <div className="loader" />
-          </div>{' '}
         </>
       )}
+
+      <div
+        data-cy="TodoLoader"
+        className={classNames('modal', 'overlay', {
+          'is-active': loading || isSaving,
+        })}
+      >
+        <div className="modal-background has-background-white-ter" />
+        <div className="loader" />
+      </div>
     </div>
   );
 };
