@@ -44,6 +44,7 @@ export const TodoItem: React.FC<Props> = ({
 
     if (trimmedTitle === title) {
       setIsEditing(false);
+
       return;
     }
 
@@ -64,11 +65,15 @@ export const TodoItem: React.FC<Props> = ({
         onEditTodo(id, trimmedTitle);
         setNewTitle(trimmedTitle);
       }
+
       setIsEditing(false);
     } catch {
-      onError(trimmedTitle === '' ? 'Unable to delete a todo' : 'Unable to update a todo');
-      setIsEditing(true); 
-     
+      onError(
+        trimmedTitle === ''
+          ? 'Unable to delete a todo'
+          : 'Unable to update a todo',
+      );
+      setIsEditing(true);
     } finally {
       setIsSaving(false);
       onLoading(false);
@@ -102,11 +107,18 @@ export const TodoItem: React.FC<Props> = ({
           }}
           disabled={loading || isSaving}
         />
-        <span className="hidden" style={{ display: 'none' }}>*</span>
+        <span className="hidden" style={{ display: 'none' }}>
+          *
+        </span>
       </label>
 
       {isEditing ? (
-        <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+        <form
+          onSubmit={e => {
+            e.preventDefault();
+            handleSave();
+          }}
+        >
           <input
             ref={renameInputRef}
             onBlur={handleSave}
@@ -116,13 +128,15 @@ export const TodoItem: React.FC<Props> = ({
             className="todo__title-field"
             placeholder="Empty todo will be deleted"
             value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
+            onChange={e => setNewTitle(e.target.value)}
             autoFocus
           />
         </form>
       ) : (
         <>
-          <span data-cy="TodoTitle" className="todo__title">{title}</span>
+          <span data-cy="TodoTitle" className="todo__title">
+            {title}
+          </span>
           <button
             type="button"
             className="todo__remove"
